@@ -7,13 +7,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-<!-- Imágenes laterales (personajes) - SOLO VISIBLE EN ESCRITORIO -->
+<!-- Personajes laterales - SOLO VISIBLE EN ESCRITORIO -->
 <img src="assets/img/1.png" class="side-character left-character" alt="Equipo 1">
 <img src="assets/img/2.png" class="side-character right-character" alt="Equipo 2">
 
+<!-- Pantalla de inicio -->
 <section id="startScreen" class="overlay">
   <div class="card">
     <img src="assets/img/cruz-roja.png" class="logo-start" alt="Cruz Roja">
@@ -24,6 +24,7 @@
   </div>
 </section>
 
+<!-- Pantalla de registro -->
 <section id="playerScreen" class="overlay hidden">
   <div class="card">
     <h1>REGISTRARSE</h1>
@@ -36,6 +37,7 @@
   </div>
 </section>
 
+<!-- Pantalla de Game Over -->
 <section id="gameOverScreen" class="overlay hidden">
   <div class="card">
     <h1>GAME OVER</h1>
@@ -44,13 +46,14 @@
   </div>
 </section>
 
+<!-- Contenedor principal del juego -->
 <div class="game-wrapper hidden">
-
   <header class="top">
     <h1>100 MEXICANOS</h1>
     <p>RIESGOS VOLCÁNICOS</p>
   </header>
 
+  <!-- Marcadores -->
   <section class="scores">
     <div class="team">
       <h2>EQUIPO 1</h2>
@@ -62,15 +65,16 @@
     </div>
   </section>
 
+  <!-- Área de juego -->
   <section class="game">
     <h3 id="questionText"></h3>
 
     <div class="answers">
-      <div class="answer"></div>
-      <div class="answer"></div>
-      <div class="answer"></div>
-      <div class="answer"></div>
-      <div class="answer"></div>
+      <div class="answer" data-index="0"></div>
+      <div class="answer" data-index="1"></div>
+      <div class="answer" data-index="2"></div>
+      <div class="answer" data-index="3"></div>
+      <div class="answer" data-index="4"></div>
     </div>
 
     <!-- X de errores -->
@@ -81,18 +85,20 @@
     </div>
   </section>
 
+  <!-- Área de entrada -->
   <section class="input-area">
     <p id="turno">TURNO DEL EQUIPO 1</p>
     <input id="respuesta" placeholder="Escribe tu respuesta..." autocomplete="off">
     <button id="btnEnviar">GO!</button>
   </section>
 
-  <!-- 🔥 PERSONAJES PARA MÓVIL (aparecen abajo en celular) -->
-  <div class="mobile-characters">
-    <img src="assets/img/1.png" class="mobile-character" alt="Equipo 1">
-    <img src="assets/img/2.png" class="mobile-character" alt="Equipo 2">
-  </div>
+  <!-- Emblema -->
+  <img src="assets/img/cruz-roja.png" class="emblema" alt="Cruz Roja">
 
+  <!-- Footer -->
+  <footer>
+    <p>CRUZ ROJA MEXICANA</p>
+  </footer>
 </div>
 
 <script type="module" src="script.js"></script>
