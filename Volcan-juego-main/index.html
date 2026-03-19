@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>100 Mexicanos – Riesgos Volcánicos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- Imágenes laterales (personajes) - SOLO VISIBLE EN ESCRITORIO -->
+<img src="assets/img/1.png" class="side-character left-character" alt="Equipo 1">
+<img src="assets/img/2.png" class="side-character right-character" alt="Equipo 2">
+
+<section id="startScreen" class="overlay">
+  <div class="card">
+    <img src="assets/img/cruz-roja.png" class="logo-start" alt="Cruz Roja">
+    <h1>100 MEXICANOS</h1>
+    <h2>DIJERON</h2>
+    <p class="subtitle">RIESGOS VOLCÁNICOS</p>
+    <button id="btnStart">PRESIONA START</button>
+  </div>
+</section>
+
+<section id="playerScreen" class="overlay hidden">
+  <div class="card">
+    <h1>REGISTRARSE</h1>
+    <input id="playerName" placeholder="Tu nombre">
+    <select id="playerTeam">
+      <option value="1">Equipo 1</option>
+      <option value="2">Equipo 2</option>
+    </select>
+    <button id="btnJoin">ENTRAR</button>
+  </div>
+</section>
+
+<section id="gameOverScreen" class="overlay hidden">
+  <div class="card">
+    <h1>GAME OVER</h1>
+    <p id="gameOverText"></p>
+    <button id="btnNext">CONTINUAR</button>
+  </div>
+</section>
+
+<div class="game-wrapper hidden">
+
+  <header class="top">
+    <h1>100 MEXICANOS</h1>
+    <p>RIESGOS VOLCÁNICOS</p>
+  </header>
+
+  <section class="scores">
+    <div class="team">
+      <h2>EQUIPO 1</h2>
+      <span id="score1">0</span>
+    </div>
+    <div class="team">
+      <h2>EQUIPO 2</h2>
+      <span id="score2">0</span>
+    </div>
+  </section>
+
+  <section class="game">
+    <h3 id="questionText"></h3>
+
+    <div class="answers">
+      <div class="answer"></div>
+      <div class="answer"></div>
+      <div class="answer"></div>
+      <div class="answer"></div>
+      <div class="answer"></div>
+    </div>
+
+    <!-- X de errores -->
+    <div class="errors">
+      <span>X</span>
+      <span>X</span>
+      <span>X</span>
+    </div>
+  </section>
+
+  <section class="input-area">
+    <p id="turno">TURNO DEL EQUIPO 1</p>
+    <input id="respuesta" placeholder="Escribe tu respuesta..." autocomplete="off">
+    <button id="btnEnviar">GO!</button>
+  </section>
+
+  <!-- 🔥 PERSONAJES PARA MÓVIL (aparecen abajo en celular) -->
+  <div class="mobile-characters">
+    <img src="assets/img/1.png" class="mobile-character" alt="Equipo 1">
+    <img src="assets/img/2.png" class="mobile-character" alt="Equipo 2">
+  </div>
+
+</div>
+
+<script type="module" src="script.js"></script>
+</body>
+</html>
