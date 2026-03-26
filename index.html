@@ -46,6 +46,24 @@
   </div>
 </section>
 
+<!-- Modal de bloqueado - CON CLASE MODAL -->
+<div id="blockedModal" class="overlay modal hidden">
+  <div class="card">
+    <h2>🚫 ESTÁS BLOQUEADO</h2>
+    <p>Has sido bloqueado por el presentador</p>
+    <p class="small">Espera instrucciones</p>
+  </div>
+</div>
+
+<!-- Modal de expulsado -->
+<div id="expulsadoModal" class="overlay modal hidden">
+  <div class="card">
+    <h2>❌ HAS SIDO EXPULSADO</h2>
+    <p>No puedes seguir participando</p>
+    <p class="small">Contacta al presentador</p>
+  </div>
+</div>
+
 <!-- Contenedor principal del juego -->
 <div class="game-wrapper hidden">
   <header class="top">
@@ -53,7 +71,7 @@
     <p>RIESGOS VOLCÁNICOS</p>
   </header>
 
-  <!-- Marcadores -->
+  <!-- Marcadores CON GLOBAL SCORE DENTRO -->
   <section class="scores">
     <div class="team">
       <h2>EQUIPO 1</h2>
@@ -62,6 +80,11 @@
     <div class="team">
       <h2>EQUIPO 2</h2>
       <span id="score2">0</span>
+    </div>
+    
+    <!-- GLOBAL SCORE INTEGRADO DENTRO DEL MISMO BLOQUE -->
+    <div id="globalScoreContainer">
+      <p id="globalScore">🌍 GLOBAL: 0 - 0</p>
     </div>
   </section>
 
@@ -85,9 +108,10 @@
     </div>
   </section>
 
-  <!-- Área de entrada -->
+  <!-- Área de entrada con label dinámico -->
   <section class="input-area">
     <p id="turno">TURNO DEL EQUIPO 1</p>
+    <p class="input-label" id="inputLabel">👉 INTRODUCE TU RESPUESTA</p>
     <input id="respuesta" placeholder="Escribe tu respuesta..." autocomplete="off">
     <button id="btnEnviar">GO!</button>
   </section>

@@ -1,4 +1,4 @@
-/* ================= script.js ================= */
+/* ================= script.js VERSIÓN PRO ACTUALIZADA ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getDatabase,
@@ -24,7 +24,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* registrar jugador (si lo usas) */
+/* registrar jugador */
 window.registrarJugadorFirebase = function (jugador) {
   const jugadorRef = push(ref(db, "jugadores"));
   const jugadorId = jugadorRef.key;
@@ -36,23 +36,28 @@ window.registrarJugadorFirebase = function (jugador) {
   });
   
   localStorage.setItem("jugadorId", jugadorId);
+  return jugadorId;
 };
 
 window.addEventListener("DOMContentLoaded", () => {
   /* ================= ESTADO LOCAL ================= */
   let rondaActual = 0;
-  let turno = 1;
+  let turno = { equipo: 1, jugadorId: null };
   let pausado = false;
 
   let scores = { 1: 0, 2: 0 };
+  let scoresGlobal = { 1: 0, 2: 0 };
   let erroresPorEquipo = { 1: 0, 2: 0 };
 
   let respuestasMostradas = [];
   let ultimoReset = null;
   
-  /* ===== MEJORAS PRO ===== */
   let estadoJugador = "activo";
   let cooldown = false;
+  let miId = localStorage.getItem("jugadorId");
+  
+  /* ===== VARIABLE PARA JUGADORES GLOBAL ===== */
+  let jugadoresGlobal = {};
 
   /* ================= RONDAS ================= */
   const rondas = [
@@ -82,6 +87,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const startScreen = document.getElementById("startScreen");
   const playerScreen = document.getElementById("playerScreen");
   const gameOverScreen = document.getElementById("gameOverScreen");
+  const blockedModal = document.getElementById("blockedModal");
+  const expulsadoModal = document.getElementById("expulsadoModal");
   const gameWrapper = document.querySelector(".game-wrapper");
 
   const btnStart = document.getElementById("btnStart");
@@ -92,6 +99,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const inputRespuesta = document.getElementById("respuesta");
   const turnoTxt = document.getElementById("turno");
   const questionText = document.getElementById("questionText");
+  const globalScoreEl = document.getElementById("globalScore");
+  const inputLabel = document.getElementById("inputLabel");
 
   const answers = document.querySelectorAll(".answer");
   const errorsWrap = document.querySelector(".errors");
@@ -100,8 +109,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const score1 = document.getElementById("score1");
   const score2 = document.getElementById("score2");
   const gameOverText = document.getElementById("gameOverText");
-
-  const miId = localStorage.getItem("jugadorId");
 
   /* ===== FIX: asegurar X ===== */
   if (errorsWrap) {
@@ -131,22 +138,108 @@ window.addEventListener("DOMContentLoaded", () => {
   function actualizarScoresUI() {
     score1.textContent = scores[1] ?? 0;
     score2.textContent = scores[2] ?? 0;
+    if (globalScoreEl) {
+      globalScoreEl.textContent = `🌍 GLOBAL: ${scoresGlobal[1] ?? 0} - ${scoresGlobal[2] ?? 0}`;
+    }
   }
 
   function pintarErroresUI() {
     if (!errorXs || errorXs.length === 0) return;
-    const e = erroresPorEquipo[turno] ?? 0;
+    const e = erroresPorEquipo[turno.equipo] ?? 0;
     errorXs.forEach(x => x.classList.remove("active"));
     for (let i = 0; i < Math.min(e, 3); i++) {
       errorXs[i].classList.add("active");
     }
   }
 
+  /* ===== NUEVA FUNCIÓN: ACTUALIZAR TURNO CON NOMBRE DEL JUGADOR ===== */
+  function actualizarTurnoConNombre() {
+    if (!turnoTxt) return;
+    
+    if (turno.jugadorId && jugadoresGlobal && jugadoresGlobal[turno.jugadorId]) {
+      const jugador = jugadoresGlobal[turno.jugadorId];
+      turnoTxt.innerHTML = `🎯 TURNO DE: ${jugador.nombre}<br><span style="font-size: 10px; color: #ffcc00;">(EQUIPO ${turno.equipo})</span>`;
+      
+      // Actualizar placeholder del input si es su turno
+      if (inputRespuesta && jugador.id === miId && estadoJugador !== "bloqueado" && estadoJugador !== "expulsado" && !pausado) {
+        inputRespuesta.placeholder = `✍️ ${jugador.nombre}, escribe tu respuesta...`;
+      } else if (inputRespuesta && jugador.id === miId) {
+        inputRespuesta.placeholder = "⏳ Espera tu turno...";
+      }
+    } else {
+      turnoTxt.innerHTML = `🎮 TURNO DEL EQUIPO ${turno.equipo}`;
+    }
+  }
+
+  function actualizarLabelDinamico() {
+    if (!inputLabel) return;
+    
+    inputLabel.classList.remove("bloqueado", "expulsado");
+    
+    if (estadoJugador === "bloqueado") {
+      inputLabel.textContent = "🚫 BLOQUEADO";
+      inputLabel.classList.add("bloqueado");
+    } else if (estadoJugador === "expulsado") {
+      inputLabel.textContent = "❌ EXPULSADO";
+      inputLabel.classList.add("expulsado");
+    } else if (turno.jugadorId === miId && !pausado) {
+      const jugador = jugadoresGlobal[miId];
+      if (jugador) {
+        inputLabel.textContent = `👉 ${jugador.nombre}, es tu turno`;
+      } else {
+        inputLabel.textContent = "👉 INTRODUCE TU RESPUESTA";
+      }
+    } else {
+      inputLabel.textContent = "👉 INTRODUCE TU RESPUESTA";
+    }
+  }
+
+  function actualizarEstadoInputYBoton() {
+    if (!inputRespuesta) return;
+    
+    // Remover clases previas
+    inputRespuesta.classList.remove("turno-activo", "no-turno", "bloqueado");
+    
+    // Verificar estado del jugador
+    const estaInhabilitado = estadoJugador === "bloqueado" || estadoJugador === "expulsado";
+    
+    if (estaInhabilitado) {
+      inputRespuesta.disabled = true;
+      inputRespuesta.classList.add("bloqueado");
+      inputRespuesta.placeholder = estadoJugador === "bloqueado" ? "🚫 Bloqueado" : "❌ Expulsado";
+      if (btnEnviar) btnEnviar.disabled = true;
+      return;
+    }
+    
+    // Verificar si es su turno
+    const esMiTurno = turno.jugadorId === miId;
+    
+    if (esMiTurno && !pausado) {
+      inputRespuesta.disabled = false;
+      inputRespuesta.classList.add("turno-activo");
+      const jugador = jugadoresGlobal[miId];
+      if (jugador) {
+        inputRespuesta.placeholder = `✍️ ${jugador.nombre}, escribe tu respuesta...`;
+      } else {
+        inputRespuesta.placeholder = "✍️ Escribe tu respuesta...";
+      }
+      if (btnEnviar) btnEnviar.disabled = false;
+    } else {
+      inputRespuesta.disabled = true;
+      inputRespuesta.classList.add("no-turno");
+      if (turno.jugadorId && jugadoresGlobal[turno.jugadorId]) {
+        inputRespuesta.placeholder = `⏳ Turno de ${jugadoresGlobal[turno.jugadorId].nombre}`;
+      } else {
+        inputRespuesta.placeholder = "⏳ Espera tu turno";
+      }
+      if (btnEnviar) btnEnviar.disabled = true;
+    }
+  }
+
   function iniciarRondaUI() {
     respuestasMostradas = [];
     inputRespuesta.value = "";
-    inputRespuesta.disabled = pausado;
-
+    
     answers.forEach((a, index) => {
       a.classList.remove("revealed");
       const resp = rondas[rondaActual]?.respuestas?.[index];
@@ -154,10 +247,38 @@ window.addEventListener("DOMContentLoaded", () => {
     });
 
     questionText.textContent = rondas[rondaActual]?.pregunta ?? "";
-    turnoTxt.textContent = `TURNO DEL EQUIPO ${turno}`;
+    actualizarTurnoConNombre();
     actualizarScoresUI();
     pintarErroresUI();
+    actualizarEstadoInputYBoton();
+    actualizarLabelDinamico();
   }
+
+  function mostrarGameOver() {
+    if (inputRespuesta) inputRespuesta.disabled = true;
+    if (btnEnviar) btnEnviar.disabled = true;
+    
+    // Calcular ganador basado en scores globales
+    const ganador = scoresGlobal[1] > scoresGlobal[2] ? 1 : 2;
+    const perdedor = ganador === 1 ? 2 : 1;
+    
+    gameOverText.innerHTML = `🏆 ¡GANADOR: EQUIPO ${ganador}! 🏆<br><span>Puntos: ${scoresGlobal[ganador]} - ${scoresGlobal[perdedor]}</span>`;
+    
+    gameWrapper.classList.add("hidden");
+    gameOverScreen.classList.remove("hidden");
+  }
+
+  /* ================= ESCUCHAR JUGADORES GLOBAL ================= */
+  onValue(ref(db, "jugadores"), (snapshot) => {
+    if (snapshot.exists()) {
+      jugadoresGlobal = snapshot.val();
+    } else {
+      jugadoresGlobal = {};
+    }
+    actualizarTurnoConNombre();
+    actualizarEstadoInputYBoton();
+    actualizarLabelDinamico();
+  });
 
   /* ================= ESCUCHAR ESTADO DEL JUGADOR ================= */
   if (miId) {
@@ -167,29 +288,54 @@ window.addEventListener("DOMContentLoaded", () => {
       const data = snap.val();
       estadoJugador = data.estado || "activo";
       
-      // Si está expulsado o bloqueado, deshabilitar input
-      if (estadoJugador === "bloqueado" || estadoJugador === "expulsado") {
-        inputRespuesta.disabled = true;
-        inputRespuesta.placeholder = estadoJugador === "bloqueado" ? "🚫 Bloqueado" : "❌ Expulsado";
-      } else {
-        inputRespuesta.disabled = pausado;
-        inputRespuesta.placeholder = "Escribe tu respuesta...";
+      // Guardar equipo del jugador
+      if (data.equipo) {
+        localStorage.setItem("equipo", data.equipo);
       }
+      
+      // Mostrar modales según estado
+      if (estadoJugador === "bloqueado") {
+        blockedModal?.classList.remove("hidden");
+        expulsadoModal?.classList.add("hidden");
+      } else if (estadoJugador === "expulsado") {
+        expulsadoModal?.classList.remove("hidden");
+        blockedModal?.classList.add("hidden");
+      } else {
+        blockedModal?.classList.add("hidden");
+        expulsadoModal?.classList.add("hidden");
+      }
+      
+      actualizarEstadoInputYBoton();
+      actualizarLabelDinamico();
     });
   }
 
-  /* ================= START / REGISTRO ================= */
+  /* ================= START / REGISTRO CON LÍMITE ================= */
   btnStart?.addEventListener("click", () => {
     startScreen.classList.add("hidden");
     playerScreen.classList.remove("hidden");
   });
 
-  btnJoin?.addEventListener("click", () => {
+  btnJoin?.addEventListener("click", async () => {
     const nombre = document.getElementById("playerName").value.trim();
     const equipo = Number(document.getElementById("playerTeam").value);
-    if (!nombre) return alert("Escribe tu nombre");
+    
+    if (!nombre) return alert("✍️ Escribe tu nombre");
+    
+    // Límite de 5 jugadores
+    const snapshot = await get(ref(db, "jugadores"));
+    const jugadores = snapshot.val() || {};
+    const jugadoresActivos = Object.values(jugadores).filter(j => j.estado !== "expulsado");
+    
+    if (jugadoresActivos.length >= 5) {
+      alert("🚫 Máximo 5 jugadores permitidos");
+      return;
+    }
 
-    window.registrarJugadorFirebase?.({ nombre, equipo, fecha: Date.now() });
+    const jugadorId = window.registrarJugadorFirebase({ nombre, equipo, fecha: Date.now() });
+    miId = jugadorId;
+    localStorage.setItem("jugadorId", jugadorId);
+    localStorage.setItem("equipo", equipo);
 
     playerScreen.classList.add("hidden");
     gameWrapper.classList.remove("hidden");
@@ -197,13 +343,6 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   /* ================= GAME OVER ================= */
-  function mostrarGameOver() {
-    inputRespuesta.disabled = true;
-    gameOverText.textContent = `EL EQUIPO ${turno} PERDIÓ`;
-    gameWrapper.classList.add("hidden");
-    gameOverScreen.classList.remove("hidden");
-  }
-
   btnNext?.addEventListener("click", () => {
     gameOverScreen.classList.add("hidden");
     gameWrapper.classList.remove("hidden");
@@ -212,11 +351,11 @@ window.addEventListener("DOMContentLoaded", () => {
 
   /* ================= RESPUESTA ================= */
   async function marcarErrorFirebase() {
-    const actual = (erroresPorEquipo[turno] ?? 0) + 1;
-    erroresPorEquipo[turno] = actual;
+    const actual = (erroresPorEquipo[turno.equipo] ?? 0) + 1;
+    erroresPorEquipo[turno.equipo] = actual;
 
     await update(ref(db, "estadoJuego"), {
-      [`errores/${turno}`]: actual
+      [`errores/${turno.equipo}`]: actual
     });
 
     pintarErroresUI();
@@ -224,52 +363,81 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function verificarRespuesta() {
-    // MEJORA: Verificar estado del jugador
     if (estadoJugador === "bloqueado") {
-      alert("Estás bloqueado 🚫");
+      alert("🚫 Estás bloqueado");
       return;
     }
 
     if (estadoJugador === "expulsado") {
-      alert("Estás expulsado ❌");
+      alert("❌ Estás expulsado");
       return;
     }
     
-    // MEJORA: Anti-spam
     if (cooldown) return;
-    
-    // ✅ FIX: Quitamos sincronizando, solo verificamos pausado
-    if (pausado) return;
+    if (pausado) {
+      alert("⏸️ Juego pausado");
+      return;
+    }
 
-    // ✅ MEJORA: Validar que sea el turno correcto (opcional)
-    if (miId && typeof turno === "object" && turno.jugadorId && turno.jugadorId !== miId) {
-      alert("No es tu turno 😤");
+    // Verificar que sea su turno específico
+    if (turno.jugadorId !== miId) {
+      const jugadorActivo = jugadoresGlobal[turno.jugadorId];
+      if (jugadorActivo) {
+        alert(`⏳ No es tu turno. Está participando: ${jugadorActivo.nombre}`);
+      } else {
+        alert("⏳ No es tu turno");
+      }
       return;
     }
 
     const texto = normalizar(inputRespuesta.value);
-    if (!texto) return;
+    if (!texto) {
+      alert("✍️ Escribe una respuesta");
+      return;
+    }
 
     const ronda = rondas[rondaActual];
     let acerto = false;
+    let respuestaAcertada = "";
 
     ronda.respuestas.forEach((resp, index) => {
       if (respuestasMostradas.includes(index) || acerto) return;
       resp.claves.forEach(clave => {
         if (texto.includes(normalizar(clave))) {
           acerto = true;
+          respuestaAcertada = resp.texto;
+          
+          // Actualizar scores y scoresGlobal
+          const nuevoScore = (scores[turno.equipo] ?? 0) + resp.puntos;
+          const nuevoGlobal = (scoresGlobal[turno.equipo] ?? 0) + resp.puntos;
+          
           update(ref(db, "estadoJuego"), {
             [`respuestasReveladas/${index}`]: true,
-            [`scores/${turno}`]: (scores[turno] ?? 0) + resp.puntos
+            [`scores/${turno.equipo}`]: nuevoScore,
+            [`scoresGlobal/${turno.equipo}`]: nuevoGlobal
           });
         }
       });
     });
 
     inputRespuesta.value = "";
-    if (!acerto) marcarErrorFirebase();
     
-    // MEJORA: Activar cooldown
+    if (!acerto) {
+      marcarErrorFirebase();
+      // Feedback visual de error
+      inputRespuesta.style.background = "#ffe0e0";
+      setTimeout(() => {
+        if (inputRespuesta) inputRespuesta.style.background = "";
+      }, 500);
+    } else {
+      // Feedback visual de acierto
+      inputRespuesta.style.background = "#eaffea";
+      setTimeout(() => {
+        if (inputRespuesta) inputRespuesta.style.background = "";
+      }, 500);
+      console.log(`✅ Acierto: ${respuestaAcertada}`);
+    }
+    
     cooldown = true;
     setTimeout(() => cooldown = false, 1500);
   }
@@ -285,23 +453,26 @@ window.addEventListener("DOMContentLoaded", () => {
 
     const e = snapshot.val();
 
-    // ✅ FIX 1: Manejar turno correctamente (objeto o número)
+    // Manejar turno correctamente (objeto o número)
     if (e.turno !== undefined) {
-      turno = extraerTurnoNumero(e.turno);
+      if (typeof e.turno === 'object') {
+        turno = e.turno;
+      } else {
+        turno = { equipo: e.turno, jugadorId: null };
+      }
     }
 
     if (e.reset && e.reset !== ultimoReset) {
       ultimoReset = e.reset;
       rondaActual = e.rondaActual ?? 0;
       
-      // ✅ FIX 2: También en el reset
-      turno = extraerTurnoNumero(e.turno ?? 1);
+      turno = e.turno ? (typeof e.turno === 'object' ? e.turno : { equipo: e.turno, jugadorId: null }) : { equipo: 1, jugadorId: null };
       
       pausado = !!e.pausado;
       scores = e.scores ?? { 1: 0, 2: 0 };
+      scoresGlobal = e.scoresGlobal ?? { 1: 0, 2: 0 };
       erroresPorEquipo = e.errores ?? { 1: 0, 2: 0 };
       
-      // Reiniciar respuestas reveladas
       respuestasMostradas = [];
       answers.forEach(a => a.classList.remove("revealed"));
       
@@ -313,6 +484,12 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.rondaActual !== undefined) rondaActual = e.rondaActual;
     if (e.pausado !== undefined) pausado = !!e.pausado;
     if (e.scores) scores = e.scores;
+    if (e.scoresGlobal) {
+      scoresGlobal = e.scoresGlobal;
+      if (globalScoreEl) {
+        globalScoreEl.textContent = `🌍 GLOBAL: ${scoresGlobal[1] ?? 0} - ${scoresGlobal[2] ?? 0}`;
+      }
+    }
     if (e.errores) erroresPorEquipo = e.errores;
 
     // Actualizar respuestas reveladas
@@ -329,22 +506,24 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     questionText.textContent = rondas[rondaActual]?.pregunta ?? "";
-    turnoTxt.textContent = `TURNO DEL EQUIPO ${turno}`;
-    inputRespuesta.disabled = pausado || estadoJugador === "bloqueado" || estadoJugador === "expulsado";
+    actualizarTurnoConNombre();
     actualizarScoresUI();
     pintarErroresUI();
+    actualizarEstadoInputYBoton();
+    actualizarLabelDinamico();
   });
 
-  /* ================= BOOTSTRAP (MEJORADO con get) ================= */
+  /* ================= BOOTSTRAP ================= */
   get(ref(db, "estadoJuego")).then((snap) => {
     if (snap.exists()) return;
 
     set(ref(db, "estadoJuego"), {
       rondaActual: 0,
-      turno: 1,  // ✅ Guardamos como número, no objeto
+      turno: { equipo: 1, jugadorId: null },
       pausado: false,
       respuestasReveladas: {},
       scores: { 1: 0, 2: 0 },
+      scoresGlobal: { 1: 0, 2: 0 },
       errores: { 1: 0, 2: 0 },
       reset: Date.now()
     });
